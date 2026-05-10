@@ -1,0 +1,82 @@
+{
+  "filename": "public_s3.tf",
+  "findings": [
+    {
+      "id": "S3-public_acl",
+      "rule_id": "S3-001",
+      "resource_type": "aws_s3_bucket_acl",
+      "resource_name": "public_acl",
+      "severity": "Critical",
+      "confidence": 99.0,
+      "title": "Public S3 Bucket Detected",
+      "description": "S3 bucket ACL resource 'public_acl' is set to 'public-read', making bucket contents publicly accessible. This can lead to data exposure.",
+      "evidence": "acl = \"public-read\"",
+      "remediation": "Set the bucket ACL to 'private' and enable S3 Block Public Access.",
+      "remediation_code": "acl = \"private\"\n\n# Also add:\nresource \"aws_s3_bucket_public_access_block\" \"block\" {\n  bucket = aws_s3_bucket.example.id\n  block_public_acls = true\n  block_public_policy = true\n}",
+      "compliance_mappings": [
+        {
+          "framework": "CIS",
+          "control_id": "2.1.1",
+          "description": "Ensure S3 Bucket Policy does not allow public access"
+        },
+        {
+          "framework": "NIST",
+          "control_id": "AC-3",
+          "description": "Access Enforcement"
+        },
+        {
+          "framework": "SOC2",
+          "control_id": "CC6.1",
+          "description": "Logical and Physical Access Controls"
+        }
+      ],
+      "attack_surface_score": 90.0,
+      "is_ai_augmented": false
+    }
+  ],
+  "attack_chains": [],
+  "ai_analysis": {
+    "executive_summary": "The infrastructure audit identified 1 security findings, including 1 critical and 0 high-severity issues. The configuration exhibits significant exposure to external attack vectors through open network ports and overly permissive IAM policies. Immediate remediation is recommended to prevent potential data breach and compliance violations.",
+    "technical_analysis": "The Terraform configuration reveals multiple critical security gaps:\n\n1. **Network Perimeter Failures**: Security groups allow unrestricted inbound traffic (0.0.0.0/0) on sensitive management ports, creating direct attack vectors for brute-force and exploitation.\n\n2. **Identity & Access Management Risks**: Wildcard IAM permissions (Action: *) violate the principle of least privilege and enable full lateral movement across all AWS services.\n\n3. **Data Protection Gaps**: Public S3 bucket ACLs and unencrypted storage create pathways for data exfiltration and expose sensitive information to unauthorized access.\n\n4. **Credential Management**: Hardcoded database credentials in Terraform state files can be extracted by anyone with access to the state backend.",
+    "business_impact": "**Financial Risk**: Potential data breach costs averaging $4.45M (IBM 2023 report). Unauthorized resource provisioning could generate unexpected AWS charges.\n\n**Compliance Impact**: Violations of CIS AWS Foundations Benchmark, NIST 800-53, and SOC2 controls. May result in failed audits and loss of compliance certifications.\n\n**Reputational Damage**: Public S3 bucket exposure has led to high-profile breaches. Customer trust erosion and potential legal action.\n\n**Operational Risk**: Infrastructure takeover through SSH + IAM chain could result in complete service disruption and ransomware scenarios.",
+    "remediation_plan": "**Priority 1 (Immediate)**:\n- Restrict all security group SSH access to VPN/office CIDR blocks\n- Replace wildcard IAM policies with least-privilege permissions\n- Set all S3 bucket ACLs to private and enable Block Public Access\n\n**Priority 2 (Within 48 hours)**:\n- Enable encryption at rest for all RDS instances and EBS volumes\n- Migrate hardcoded credentials to AWS Secrets Manager\n- Strengthen IAM password policy (14+ chars, complexity requirements)\n\n**Priority 3 (Within 1 week)**:\n- Implement AWS Config rules for continuous compliance monitoring\n- Enable CloudTrail logging and GuardDuty threat detection\n- Conduct a full IAM access review and remove unused permissions",
+    "contextual_findings": [],
+    "attack_chains": []
+  },
+  "posture": {
+    "overall": 25.0,
+    "severity_breakdown": {
+      "Critical": 1,
+      "High": 0,
+      "Medium": 0,
+      "Low": 0,
+      "Info": 0
+    },
+    "risk_category": "Moderate Risk",
+    "total_findings": 1
+  },
+  "compliance": [
+    {
+      "framework": "CIS",
+      "total_controls": 12,
+      "passed": 11,
+      "failed": 1,
+      "percentage": 91.7
+    },
+    {
+      "framework": "NIST",
+      "total_controls": 10,
+      "passed": 9,
+      "failed": 1,
+      "percentage": 90.0
+    },
+    {
+      "framework": "SOC2",
+      "total_controls": 8,
+      "passed": 7,
+      "failed": 1,
+      "percentage": 87.5
+    }
+  ],
+  "raw_tf_content": "provider \"aws\" {\r\n  region = \"us-east-1\"\r\n}\r\n\r\nresource \"aws_s3_bucket\" \"public_bucket\" {\r\n  bucket = \"company-sensitive-data\"\r\n\r\n  tags = {\r\n    Environment = \"Production\"\r\n  }\r\n}\r\n\r\nresource \"aws_s3_bucket_acl\" \"public_acl\" {\r\n  bucket = aws_s3_bucket.public_bucket.id\r\n  acl    = \"public-read\"\r\n}"
+}

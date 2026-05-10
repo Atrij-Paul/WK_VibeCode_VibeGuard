@@ -1,0 +1,82 @@
+{
+  "filename": "vulnerable.tf",
+  "findings": [
+    {
+      "id": "IAM-wildcard",
+      "rule_id": "IAM-001",
+      "resource_type": "aws_iam_policy",
+      "resource_name": "wildcard",
+      "severity": "Critical",
+      "confidence": 99.0,
+      "title": "Wildcard IAM Permissions (Action: *)",
+      "description": "IAM policy 'wildcard' grants full administrative '*' permissions on all resources. This violates the principle of least privilege.",
+      "evidence": "Action = \"*\", Resource = \"*\"",
+      "remediation": "Replace wildcard permissions with specific, least-privilege actions.",
+      "remediation_code": "Action = [\n  \"s3:GetObject\",\n  \"s3:ListBucket\"\n]\nResource = \"arn:aws:s3:::my-bucket/*\"",
+      "compliance_mappings": [
+        {
+          "framework": "CIS",
+          "control_id": "1.22",
+          "description": "Ensure IAM policies are attached only to groups or roles"
+        },
+        {
+          "framework": "NIST",
+          "control_id": "AC-6",
+          "description": "Least Privilege"
+        },
+        {
+          "framework": "SOC2",
+          "control_id": "CC6.3",
+          "description": "Role-Based Access Controls"
+        }
+      ],
+      "attack_surface_score": 92.0,
+      "is_ai_augmented": false
+    }
+  ],
+  "attack_chains": [],
+  "ai_analysis": {
+    "executive_summary": "The infrastructure audit identified 1 security findings, including 1 critical and 0 high-severity issues. The configuration exhibits significant exposure to external attack vectors through open network ports and overly permissive IAM policies. Immediate remediation is recommended to prevent potential data breach and compliance violations.",
+    "technical_analysis": "The Terraform configuration reveals multiple critical security gaps:\n\n1. **Network Perimeter Failures**: Security groups allow unrestricted inbound traffic (0.0.0.0/0) on sensitive management ports, creating direct attack vectors for brute-force and exploitation.\n\n2. **Identity & Access Management Risks**: Wildcard IAM permissions (Action: *) violate the principle of least privilege and enable full lateral movement across all AWS services.\n\n3. **Data Protection Gaps**: Public S3 bucket ACLs and unencrypted storage create pathways for data exfiltration and expose sensitive information to unauthorized access.\n\n4. **Credential Management**: Hardcoded database credentials in Terraform state files can be extracted by anyone with access to the state backend.",
+    "business_impact": "**Financial Risk**: Potential data breach costs averaging $4.45M (IBM 2023 report). Unauthorized resource provisioning could generate unexpected AWS charges.\n\n**Compliance Impact**: Violations of CIS AWS Foundations Benchmark, NIST 800-53, and SOC2 controls. May result in failed audits and loss of compliance certifications.\n\n**Reputational Damage**: Public S3 bucket exposure has led to high-profile breaches. Customer trust erosion and potential legal action.\n\n**Operational Risk**: Infrastructure takeover through SSH + IAM chain could result in complete service disruption and ransomware scenarios.",
+    "remediation_plan": "**Priority 1 (Immediate)**:\n- Restrict all security group SSH access to VPN/office CIDR blocks\n- Replace wildcard IAM policies with least-privilege permissions\n- Set all S3 bucket ACLs to private and enable Block Public Access\n\n**Priority 2 (Within 48 hours)**:\n- Enable encryption at rest for all RDS instances and EBS volumes\n- Migrate hardcoded credentials to AWS Secrets Manager\n- Strengthen IAM password policy (14+ chars, complexity requirements)\n\n**Priority 3 (Within 1 week)**:\n- Implement AWS Config rules for continuous compliance monitoring\n- Enable CloudTrail logging and GuardDuty threat detection\n- Conduct a full IAM access review and remove unused permissions",
+    "contextual_findings": [],
+    "attack_chains": []
+  },
+  "posture": {
+    "overall": 25.0,
+    "severity_breakdown": {
+      "Critical": 1,
+      "High": 0,
+      "Medium": 0,
+      "Low": 0,
+      "Info": 0
+    },
+    "risk_category": "Moderate Risk",
+    "total_findings": 1
+  },
+  "compliance": [
+    {
+      "framework": "CIS",
+      "total_controls": 12,
+      "passed": 11,
+      "failed": 1,
+      "percentage": 91.7
+    },
+    {
+      "framework": "NIST",
+      "total_controls": 10,
+      "passed": 9,
+      "failed": 1,
+      "percentage": 90.0
+    },
+    {
+      "framework": "SOC2",
+      "total_controls": 8,
+      "passed": 7,
+      "failed": 1,
+      "percentage": 87.5
+    }
+  ],
+  "raw_tf_content": "provider \"aws\" {\n  region = \"us-east-1\"\n}\n\nresource \"aws_security_group\" \"allow_all\" {\n  name        = \"allow_all\"\n  description = \"Allow all inbound traffic\"\n\n  ingress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n\nresource \"aws_s3_bucket\" \"b\" {\n  bucket = \"my-tf-test-bucket-public\"\n  acl    = \"public-read\"\n}\n\nresource \"aws_iam_policy\" \"wildcard\" {\n  name        = \"wildcard_policy\"\n  description = \"A wildcard policy\"\n\n  policy = <<EOF\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"*\",\n      \"Effect\": \"Allow\",\n      \"Resource\": \"*\"\n    }\n  ]\n}\nEOF\n}\n"
+}

@@ -1,0 +1,109 @@
+{
+  "filename": "open_ingress.tf",
+  "findings": [
+    {
+      "id": "SSH-open_ingress_sg",
+      "rule_id": "SG-001",
+      "resource_type": "aws_security_group",
+      "resource_name": "open_ingress_sg",
+      "severity": "Critical",
+      "confidence": 99.0,
+      "title": "Public SSH Exposure (0.0.0.0/0)",
+      "description": "Security group 'open_ingress_sg' allows SSH (port 22) from any IP address globally. This exposes the instance to brute-force attacks and unauthorized access.",
+      "evidence": "ingress rule: from_port=22, to_port=22, cidr_blocks=[\"0.0.0.0/0\"]",
+      "remediation": "Restrict SSH access to known IP ranges (e.g., your VPN or office CIDR).",
+      "remediation_code": "cidr_blocks = [\"10.0.0.0/8\"]  # Replace with your VPN CIDR",
+      "compliance_mappings": [
+        {
+          "framework": "CIS",
+          "control_id": "4.1",
+          "description": "Ensure no security groups allow ingress from 0.0.0.0/0 to port 22"
+        },
+        {
+          "framework": "NIST",
+          "control_id": "SC-7",
+          "description": "Boundary Protection"
+        },
+        {
+          "framework": "SOC2",
+          "control_id": "CC6.1",
+          "description": "Logical and Physical Access Controls"
+        }
+      ],
+      "attack_surface_score": 95.0,
+      "is_ai_augmented": false
+    },
+    {
+      "id": "ING-open_ingress_sg",
+      "rule_id": "SG-002",
+      "resource_type": "aws_security_group",
+      "resource_name": "open_ingress_sg",
+      "severity": "High",
+      "confidence": 99.0,
+      "title": "Unrestricted Ingress \u2014 Wide Port Range Open",
+      "description": "Security group 'open_ingress_sg' allows traffic on ports 0-65535 from 0.0.0.0/0. This exposes multiple services to the internet.",
+      "evidence": "ingress rule: from_port=0, to_port=65535, cidr_blocks=[\"0.0.0.0/0\"]",
+      "remediation": "Restrict ingress to specific ports and known CIDR blocks.",
+      "remediation_code": "from_port = 443\nto_port   = 443\ncidr_blocks = [\"10.0.0.0/8\"]",
+      "compliance_mappings": [
+        {
+          "framework": "NIST",
+          "control_id": "SC-7",
+          "description": "Boundary Protection"
+        },
+        {
+          "framework": "CIS",
+          "control_id": "4.2",
+          "description": "Ensure no SG allows unrestricted ingress"
+        }
+      ],
+      "attack_surface_score": 85.0,
+      "is_ai_augmented": false
+    }
+  ],
+  "attack_chains": [],
+  "ai_analysis": {
+    "executive_summary": "The infrastructure audit identified 2 security findings, including 1 critical and 1 high-severity issues. The configuration exhibits significant exposure to external attack vectors through open network ports and overly permissive IAM policies. Immediate remediation is recommended to prevent potential data breach and compliance violations.",
+    "technical_analysis": "The Terraform configuration reveals multiple critical security gaps:\n\n1. **Network Perimeter Failures**: Security groups allow unrestricted inbound traffic (0.0.0.0/0) on sensitive management ports, creating direct attack vectors for brute-force and exploitation.\n\n2. **Identity & Access Management Risks**: Wildcard IAM permissions (Action: *) violate the principle of least privilege and enable full lateral movement across all AWS services.\n\n3. **Data Protection Gaps**: Public S3 bucket ACLs and unencrypted storage create pathways for data exfiltration and expose sensitive information to unauthorized access.\n\n4. **Credential Management**: Hardcoded database credentials in Terraform state files can be extracted by anyone with access to the state backend.",
+    "business_impact": "**Financial Risk**: Potential data breach costs averaging $4.45M (IBM 2023 report). Unauthorized resource provisioning could generate unexpected AWS charges.\n\n**Compliance Impact**: Violations of CIS AWS Foundations Benchmark, NIST 800-53, and SOC2 controls. May result in failed audits and loss of compliance certifications.\n\n**Reputational Damage**: Public S3 bucket exposure has led to high-profile breaches. Customer trust erosion and potential legal action.\n\n**Operational Risk**: Infrastructure takeover through SSH + IAM chain could result in complete service disruption and ransomware scenarios.",
+    "remediation_plan": "**Priority 1 (Immediate)**:\n- Restrict all security group SSH access to VPN/office CIDR blocks\n- Replace wildcard IAM policies with least-privilege permissions\n- Set all S3 bucket ACLs to private and enable Block Public Access\n\n**Priority 2 (Within 48 hours)**:\n- Enable encryption at rest for all RDS instances and EBS volumes\n- Migrate hardcoded credentials to AWS Secrets Manager\n- Strengthen IAM password policy (14+ chars, complexity requirements)\n\n**Priority 3 (Within 1 week)**:\n- Implement AWS Config rules for continuous compliance monitoring\n- Enable CloudTrail logging and GuardDuty threat detection\n- Conduct a full IAM access review and remove unused permissions",
+    "contextual_findings": [],
+    "attack_chains": []
+  },
+  "posture": {
+    "overall": 40.0,
+    "severity_breakdown": {
+      "Critical": 1,
+      "High": 1,
+      "Medium": 0,
+      "Low": 0,
+      "Info": 0
+    },
+    "risk_category": "Moderate Risk",
+    "total_findings": 2
+  },
+  "compliance": [
+    {
+      "framework": "CIS",
+      "total_controls": 12,
+      "passed": 10,
+      "failed": 2,
+      "percentage": 83.3
+    },
+    {
+      "framework": "NIST",
+      "total_controls": 10,
+      "passed": 9,
+      "failed": 1,
+      "percentage": 90.0
+    },
+    {
+      "framework": "SOC2",
+      "total_controls": 8,
+      "passed": 7,
+      "failed": 1,
+      "percentage": 87.5
+    }
+  ],
+  "raw_tf_content": "provider \"aws\" {\r\n  region = \"us-east-1\"\r\n}\r\n\r\nresource \"aws_security_group\" \"open_ingress_sg\" {\r\n\r\n  name = \"open-ingress\"\r\n\r\n  ingress {\r\n\r\n    from_port   = 0\r\n    to_port     = 65535\r\n\r\n    protocol    = \"tcp\"\r\n\r\n    cidr_blocks = [\"0.0.0.0/0\"]\r\n  }\r\n}"
+}

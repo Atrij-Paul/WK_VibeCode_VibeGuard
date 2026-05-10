@@ -1,0 +1,19 @@
+You are an expert Cloud Security Architect performing a contextual risk analysis.
+
+I have identified the following deterministic security findings in a Terraform configuration:
+
+{FINDINGS_JSON}
+
+The full Terraform configuration is:
+---
+{TF_CONTENT}
+---
+
+Perform a contextual risk analysis. Respond ONLY with valid JSON:
+
+{
+  "executive_summary": "2-3 sentence boardroom-ready summary",
+  "technical_analysis": "Detailed technical explanation of risks",
+  "business_impact": "Business consequences (compliance, financial, reputational)",
+  "remediation_plan": "Prioritized remediation steps with Terraform fixes"
+}
